@@ -90,8 +90,15 @@ def handle_message(message):
     if len(conversation_history) > 10: conversation_history = conversation_history[-10:]
         
     try:
-        # 加入貼圖標記指令
-        prompt_with_stickers = ROLE_PROMPT + "\n\n若氣氛適合，請在回覆文字最後加入標記，例如 [STICKER:開心]、[STICKER:撒嬌]。不要過於頻繁。"
+        # 1. 動態獲取清單，精確告知 AI 只能用這些標籤
+        available_tags = list(STICKER_MAP.keys())
+        prompt_with_stickers = (
+            f"{ROLE_PROMPT}\n\n"
+            f"【貼圖發送規則】\n"
+            f"你目前擁有的貼圖標籤只有：{available_tags}。\n"
+            f"若要發送貼圖，必須且只能從上述清單中選擇一個名稱，格式為 [STICKER:名稱]。\n"
+            f"嚴禁使用清單以外的標籤（例如絕對不准使用 [STICKER:撒嬌] 或其他未定義的名稱）。"
+        )
         
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={API_KEY}"
         payload = {"contents": [{"role": "user", "parts": [{"text": prompt_with_stickers}]}] + conversation_history}
@@ -100,25 +107,30 @@ def handle_message(message):
         if response.status_code == 200:
             ai_text = response.json()['candidates'][0]['content']['parts'][0]['text']
             
-            # 提取並移除貼圖標記
+            # 2. 強制清理機制：找出所有 [STICKER:...] 標記
+            # 即使 AI 腦補了不存在的標籤，我們也在這裡把它直接刪掉，保證不會顯示在對話中
+            found_tags = re.findall(r'\[STICKER:(.*?)\]', ai_text)
             sticker_to_send = None
-            for key, sticker_id in STICKER_MAP.items():
-                tag = f"[STICKER:{key}]"
-                if tag in ai_text:
-                    sticker_to_send = sticker_id
-                    ai_text = ai_text.replace(tag, "").strip()
-                    break
+            
+            for tag_name in found_tags:
+                if tag_name in STICKER_MAP:
+                    sticker_to_send = STICKER_MAP[tag_name]
+                    # 找到合法的，移除標記並準備發送
+                    ai_text = ai_text.replace(f"[STICKER:{tag_name}]", "").strip()
+                    break 
+                else:
+                    # 發現不合法的腦補標籤，直接暴力刪除
+                    ai_text = ai_text.replace(f"[STICKER:{tag_name}]", "").strip()
             
             conversation_history.append({"role": "model", "parts": [{"text": ai_text}]})
             
-            # 分句發送
+            # 3. 發送邏輯不變
             sentences = re.split(r'(?<=[。！？\n])', ai_text)
             for sentence in sentences:
                 if sentence.strip():
                     BOT.send_message(message.chat.id, sentence.strip())
                     time.sleep(0.5)
             
-            # 發送貼圖
             if sticker_to_send:
                 BOT.send_sticker(message.chat.id, sticker_to_send)
                 
