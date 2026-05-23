@@ -152,8 +152,10 @@ if __name__ == "__main__":
     scheduler.start()
     
     try:
-        BOT.delete_webhook()
-    except: pass
+        # 加入 drop_pending_updates=True，這能直接清除 Telegram 那邊積壓的所有錯誤訊號
+        BOT.delete_webhook(drop_pending_updates=True)
+    except Exception as e:
+        print(f"清理舊連線時發生錯誤: {e}")
     
     print("沈星回正在連線中...")
     BOT.infinity_polling(timeout=60, long_polling_timeout=60)
