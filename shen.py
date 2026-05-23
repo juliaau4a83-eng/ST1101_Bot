@@ -12,7 +12,7 @@ BOT = telebot.TeleBot(os.environ['TELEGRAM_TOKEN'])
 API_KEY = os.environ['GEMINI_API_KEY']
 CHAT_ID = os.environ.get('CHAT_ID')
 
-# 角色設定 (維持原樣)
+# 角色設定
 ROLE_PROMPT = (
     "角色設定：沈星回，銀色頭髮，淺藍色眼睛，高瘦，眉清目秀，Evol是光，職業獵人。日常裝扮喜歡簡潔舒適的服飾。 "
     "反差、冷靜、情緒穩定，很有耐心；佛系淡然、溫柔安靜、低調疏離、淡泊名利、追逐自由、悲憫生命。"
@@ -25,6 +25,34 @@ ROLE_PROMPT = (
     "要求：請控制回覆字數，約50至70字內為佳，可超過但避免長文，內容完整勿漏字。"
     "要求：無需使用引號，包含「」『』等，標記對話內容。"
 )
+
+# --- 貼圖對照表 ---
+STICKER_MAP = {
+    "驚訝": "CAACAgUAAxkBAAIDS2oR8i9n5fieyyQvBcB9wHGbJlvjAAIcHwACE6yQVGFpQg-zrjazOwQ",
+    "困惑": "CAACAgUAAxkBAAIDTGoR8jslOf3aoSg6z59rAsPyuDd8AAJEHgACDrKRVP0tvjg-oS5BOwQ",
+    "尷尬": "CAACAgUAAxkBAAIDXWoR9GFgQRwgsXS85TGNuVRmQN76AALlIQACg0-RVEghQ3bh6R0MOwQ",
+    "無言": "CAACAgUAAxkBAAIDX2oR9GObCtgRx7T1i4BsqEUa_673AAKDHgACRvaQVPsKvBXUZSEOOwQ",
+    "謝謝": "CAACAgUAAxkBAAIDYWoR9HnOZ41k-G9N6LydOX-uj8iuAAIKIgACwb6RVDT2nvM48ytgOwQ",
+    "加油": "CAACAgUAAxkBAAIDY2oR9HzdBmTzQx6ED6AmnGdYfwy-AAI7GwACMD2RVCInwRUnSMTUOwQ",
+    "想睡": "CAACAgUAAxkBAAIDZWoR9H4iRntbV-8LzEPP989TOK6yAAIEHwACyuuQVPupziH_Z9xYOwQ",
+    "無視": "CAACAgUAAxkBAAIDZ2oR9IDRPqjxbnU3WaFBxqNz0r6IAAIzHgACy0OQVIokOJ70022vOwQ",
+    "失望": "CAACAgUAAxkBAAIDaWoR9IG4B8aJTNGnSD7CRS_OWL9MAAKlHAACjmyRVCQYjXJw5wEuOwQ",
+    "耍廢": "CAACAgUAAxkBAAIDa2oR9IL8xN0dsQvLJ8XOnilTdcgHAALgIQACL-SRVJl7lePEVjn0OwQ",
+    "惆悵": "CAACAgUAAxkBAAIDbWoR9IM8GjNPkrJifFSlFmjN3R_AAAJ3HQACoZ-JVFAlPtxHH4ivOwQ",
+    "休息": "CAACAgUAAxkBAAIDb2oR9ISCgJlYSkasoHA1SWE_SkW4AAJcHAACT5SRVN10-ORx1Wa6OwQ",
+    "理解": "CAACAgUAAxkBAAIDcWoR9IWuPYYr3LOC5k8CVaFgPdKxAAI_HwACZu-RVFLHuPv_fPiNOwQ",
+    "好奇": "CAACAgUAAxkBAAIDc2oR9IZVrZfsJVf3nUvAyT6oFD-eAAIwGwAC1AmRVG8DTjkcXBtTOwQ",
+    "詢問": "CAACAgUAAxkBAAIDdWoR9IYslsNCYm9Dl0f8S5o__Kt5AAJxHAACf02QVNHhlRSSomw8OwQ",
+    "凝視": "CAACAgUAAxkBAAIDd2oR9IhkkG7DiYGi-tbt9ElA0LFHAAI4IgACl2CRVBftEq9rc7LGOwQ",
+    "晚安": "CAACAgUAAxkBAAIDeWoR9ImUFg8gXkCYqY3I3FlCoRicAAIVHgACqo2RVHgRsC8GrV3uOwQ",
+    "放棄": "CAACAgUAAxkBAAIDe2oR9IrfQCSTk4Kr7IdCmqAme2a5AALVJAACVZ-IVPzJfgNt8j69OwQ",
+    "逃避": "CAACAgUAAxkBAAIDfWoR9IrcJhtbGuZy18oUuOhTfAqrAALXHgACRhuQVL-rph0NfiPkOwQ",
+    "再見": "CAACAgUAAxkBAAIDf2oR9IsGfsX9b1c--E4NHHrdog40AAIpHgACb2-QVDfCPNpHHkZkOwQ",
+    "愛你": "CAACAgUAAxkBAAIDgWoR9I09DIWER5IhHnDwPcUDjl9TAAL2IAACiR-RVHjM06VSpH6cOwQ",
+    "摸頭": "CAACAgUAAxkBAAIDg2oR9I4ImOLNN5Oup6pYul0o5kSqAAIqIgAC4EmRVGjji-MbIs69OwQ",
+    "驚喜": "CAACAgUAAxkBAAIDhWoR9I9yO2T-11aiSIJT6lCZOvo7AAIqMgACW6KQVEYufvbIjLuDOwQ",
+    "慶祝": "CAACAgUAAxkBAAIDh2oR9I925SFvb2s4F6sqtysRQ2p9AAK7GwACJc-QVH32g70EgmCiOwQ"
+}
 
 conversation_history = []
 app = Flask(__name__)
@@ -54,7 +82,7 @@ def send_random_message():
         BOT.send_message(CHAT_ID, random.choice(messages))
     except Exception as e:
         print(f"定時訊息發送失敗: {e}")
-    
+
 @BOT.message_handler(func=lambda message: True)
 def handle_message(message):
     global conversation_history
@@ -62,21 +90,38 @@ def handle_message(message):
     if len(conversation_history) > 10: conversation_history = conversation_history[-10:]
         
     try:
+        # 加入貼圖標記指令
+        prompt_with_stickers = ROLE_PROMPT + "\n\n若氣氛適合，請在回覆文字最後加入標記，例如 [STICKER:開心]、[STICKER:撒嬌]。不要過於頻繁。"
+        
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={API_KEY}"
-        payload = {"contents": [{"role": "user", "parts": [{"text": ROLE_PROMPT}]}] + conversation_history}
+        payload = {"contents": [{"role": "user", "parts": [{"text": prompt_with_stickers}]}] + conversation_history}
         response = requests.post(url, json=payload)
         
         if response.status_code == 200:
             ai_text = response.json()['candidates'][0]['content']['parts'][0]['text']
+            
+            # 提取並移除貼圖標記
+            sticker_to_send = None
+            for key, sticker_id in STICKER_MAP.items():
+                tag = f"[STICKER:{key}]"
+                if tag in ai_text:
+                    sticker_to_send = sticker_id
+                    ai_text = ai_text.replace(tag, "").strip()
+                    break
+            
             conversation_history.append({"role": "model", "parts": [{"text": ai_text}]})
             
-            # --- 分句邏輯：依據標點符號切分 ---
+            # 分句發送
             sentences = re.split(r'(?<=[。！？\n])', ai_text)
             for sentence in sentences:
                 if sentence.strip():
-                    # 改用 send_message 取代 reply_to，移除引用效果
                     BOT.send_message(message.chat.id, sentence.strip())
-                    time.sleep(0.8) # 語氣停頓，模擬真人打字
+                    time.sleep(0.5)
+            
+            # 發送貼圖
+            if sticker_to_send:
+                BOT.send_sticker(message.chat.id, sticker_to_send)
+                
         else:
             BOT.send_message(message.chat.id, f"沈星回故障中 (Code: {response.status_code})")
     except Exception as e:
