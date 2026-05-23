@@ -94,3 +94,9 @@ if __name__ == "__main__":
     
     print("沈星回正在連線中...")
     BOT.infinity_polling(timeout=60, long_polling_timeout=60)
+
+# 用來讀取貼圖 ID 的工具
+@BOT.message_handler(content_types=['sticker'])
+def get_sticker_id(message):
+    # 這會直接在你的 Telegram 對話框裡把 ID 吐出來
+    BOT.send_message(message.chat.id, f"這張貼圖的 ID 是：\n`{message.sticker.file_id}`", parse_mode="Markdown")
