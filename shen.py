@@ -55,6 +55,13 @@ def send_random_message():
     except Exception as e:
         print(f"定時訊息發送失敗: {e}")
 
+# --- 貼圖 ID 獲取工具 ---
+@BOT.message_handler(content_types=['sticker'])
+def get_sticker_id(message):
+    sticker_id = message.sticker.file_id
+    print(f"收到貼圖，ID 為: {sticker_id}")
+    BOT.send_message(message.chat.id, f"這張貼圖的 ID 是：\n`{sticker_id}`", parse_mode="Markdown")
+    
 @BOT.message_handler(func=lambda message: True)
 def handle_message(message):
     global conversation_history
@@ -94,9 +101,3 @@ if __name__ == "__main__":
     
     print("沈星回正在連線中...")
     BOT.infinity_polling(timeout=60, long_polling_timeout=60)
-
-# 用來讀取貼圖 ID 的工具
-@BOT.message_handler(content_types=['sticker'])
-def get_sticker_id(message):
-    # 這會直接在你的 Telegram 對話框裡把 ID 吐出來
-    BOT.send_message(message.chat.id, f"這張貼圖的 ID 是：\n`{message.sticker.file_id}`", parse_mode="Markdown")
