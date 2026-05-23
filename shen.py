@@ -73,19 +73,19 @@ def handle_message(message):
         print(f"Error: {e}")
 
 if __name__ == "__main__":
-    Thread(target=run_flask).start()
+    # 1. 啟動 Flask (使用 daemon=True 確保它在背景執行)
+    Thread(target=run_flask, daemon=True).start()
     
-    # 啟動定時排程器
+    # 2. 啟動定時排程器
     scheduler = BackgroundScheduler()
     scheduler.add_job(send_random_message, 'interval', hours=4, minutes=30)
     scheduler.start()
     
+    # 3. 清除舊的 Webhook
     try:
         BOT.delete_webhook()
     except: pass
     
-    while True:
-        try:
-            BOT.polling(none_stop=True, interval=1, timeout=60, long_polling_timeout=60)
-        except Exception as e:
-            time.sleep(10)
+    # 4. 啟動 Bot (使用 infinity_polling，這會處理好連線問題)
+    print("沈星回正在連線中...")
+    BOT.infinity_polling(timeout=60, long_polling_timeout=60)
