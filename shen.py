@@ -3,15 +3,16 @@ import telebot
 import requests
 import random
 import time
+import re
 from flask import Flask
 from threading import Thread
 from apscheduler.schedulers.background import BackgroundScheduler
 
 BOT = telebot.TeleBot(os.environ['TELEGRAM_TOKEN'])
 API_KEY = os.environ['GEMINI_API_KEY']
-CHAT_ID = os.environ.get('CHAT_ID') # 請記得在 Render 設定這個變數
+CHAT_ID = os.environ.get('CHAT_ID')
 
-# 角色設定
+# 角色設定 (維持原樣)
 ROLE_PROMPT = (
     "角色設定：沈星回，銀色頭髮，淺藍色眼睛，高瘦，眉清目秀，Evol是光，職業獵人。日常裝扮喜歡簡潔舒適的服飾。 "
     "反差、冷靜、情緒穩定，很有耐心；佛系淡然、溫柔安靜、低調疏離、淡泊名利、追逐自由、悲憫生命。"
@@ -34,7 +35,6 @@ def home():
 def run_flask():
     app.run(host='0.0.0.0', port=10000)
 
-# 定時訊息邏輯
 def send_random_message():
     if not CHAT_ID: return
     messages = [
@@ -68,26 +68,28 @@ def handle_message(message):
         if response.status_code == 200:
             ai_text = response.json()['candidates'][0]['content']['parts'][0]['text']
             conversation_history.append({"role": "model", "parts": [{"text": ai_text}]})
-            BOT.reply_to(message, ai_text)
+            
+            # --- 分句邏輯：依據標點符號切分 ---
+            sentences = re.split(r'(?<=[。！？\n])', ai_text)
+            for sentence in sentences:
+                if sentence.strip():
+                    # 改用 send_message 取代 reply_to，移除引用效果
+                    BOT.send_message(message.chat.id, sentence.strip())
+                    time.sleep(0.8) # 語氣停頓，模擬真人打字
         else:
-            BOT.reply_to(message, f"沈星回故障中 (Code: {response.status_code})")
+            BOT.send_message(message.chat.id, f"沈星回故障中 (Code: {response.status_code})")
     except Exception as e:
         print(f"Error: {e}")
 
 if __name__ == "__main__":
-    # 1. 啟動 Flask (使用 daemon=True 確保它在背景執行)
     Thread(target=run_flask, daemon=True).start()
-    
-    # 2. 啟動定時排程器
     scheduler = BackgroundScheduler()
     scheduler.add_job(send_random_message, 'interval', hours=4, minutes=30)
     scheduler.start()
     
-    # 3. 清除舊的 Webhook
     try:
         BOT.delete_webhook()
     except: pass
     
-    # 4. 啟動 Bot (使用 infinity_polling，這會處理好連線問題)
     print("沈星回正在連線中...")
     BOT.infinity_polling(timeout=60, long_polling_timeout=60)
