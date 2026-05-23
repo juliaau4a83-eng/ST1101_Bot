@@ -156,10 +156,11 @@ if __name__ == "__main__":
     
     print("沈星回正在連線中...")
     
-    # --- 最終極的穩健啟動方式 ---
-    # 1. 確保不使用 Webhook 模式
-    BOT.remove_webhook() 
-    
-    # 2. 啟動 Polling，設定極小的 polling_interval，避免過度頻繁請求
-    # 且不設定過長的 timeout
-    BOT.infinity_polling(timeout=10, long_polling_timeout=5)
+    # --- 關鍵修正：單一實例與容錯 ---
+    # 不要使用 infinity_polling，改用 polling 確保只連線一次
+    # 並加上 error_handler 避免程式崩潰後引發連鎖錯誤
+    try:
+        BOT.remove_webhook()
+        BOT.polling(none_stop=True, interval=1, timeout=20)
+    except Exception as e:
+        print(f"啟動失敗，請稍後重試: {e}")
