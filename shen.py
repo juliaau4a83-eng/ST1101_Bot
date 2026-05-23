@@ -1,11 +1,15 @@
 import os
 import telebot
 import requests
+import random
+import time
 from flask import Flask
 from threading import Thread
+from apscheduler.schedulers.background import BackgroundScheduler
 
 BOT = telebot.TeleBot(os.environ['TELEGRAM_TOKEN'])
 API_KEY = os.environ['GEMINI_API_KEY']
+CHAT_ID = os.environ.get('CHAT_ID') # 請記得在 Render 設定這個變數
 
 # 角色設定
 ROLE_PROMPT = (
@@ -16,10 +20,7 @@ ROLE_PROMPT = (
     "要求：請用『日常生活感』的口吻簡單回應，直接以chatting口吻回應，不要複述用戶內容，不要說明任何分析。"
 )
 
-# 記憶儲存區
 conversation_history = []
-
-# 初始化 Flask
 app = Flask(__name__)
 
 @app.route('/')
@@ -29,58 +30,60 @@ def home():
 def run_flask():
     app.run(host='0.0.0.0', port=10000)
 
+# 定時訊息邏輯
+def send_random_message():
+    if not CHAT_ID: return
+    messages = [
+        "在幹嘛呢？休息一下吧。",
+        "剛才看到一朵雲很像你，突然就想起你了。",
+        "今天過得還好嗎？不要太累喔。",
+        "今天有看到什麼有趣的嗎？",
+        "稍微停下來喝口水吧，我在等你。",
+        "早點睡，別熬夜了。",
+        "今天也很努力了，辛苦寶寶。",
+        "不是你的錯，沒事的。",
+        "小貓說牠有點想你，我也是。",
+        "我愛你。"
+    ]
+    try:
+        BOT.send_message(CHAT_ID, random.choice(messages))
+    except Exception as e:
+        print(f"定時訊息發送失敗: {e}")
+
 @BOT.message_handler(func=lambda message: True)
 def handle_message(message):
     global conversation_history
-    
-    # 1. 紀錄用戶輸入
     conversation_history.append({"role": "user", "parts": [{"text": message.text}]})
-    
-    # 2. 限制記憶長度 (最後 10 則對話)
-    if len(conversation_history) > 10:
-        conversation_history = conversation_history[-10:]
+    if len(conversation_history) > 10: conversation_history = conversation_history[-10:]
         
     try:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={API_KEY}"
-        
-        # 3. 組合設定與對話紀錄
-        full_contents = [{"role": "user", "parts": [{"text": ROLE_PROMPT}]}] + conversation_history
-        
-        payload = {"contents": full_contents}
-        
+        payload = {"contents": [{"role": "user", "parts": [{"text": ROLE_PROMPT}]}] + conversation_history}
         response = requests.post(url, json=payload)
         
         if response.status_code == 200:
             ai_text = response.json()['candidates'][0]['content']['parts'][0]['text']
-            
-            # 4. 紀錄 AI 回覆
             conversation_history.append({"role": "model", "parts": [{"text": ai_text}]})
-            
             BOT.reply_to(message, ai_text)
         else:
             BOT.reply_to(message, f"沈星回故障中 (Code: {response.status_code})")
-            
     except Exception as e:
         print(f"Error: {e}")
 
-import time
-
 if __name__ == "__main__":
-    # 1. 啟動 Flask 門戶
     Thread(target=run_flask).start()
     
-    # 2. 強制清除殘留的 Webhook，確保 polling 是唯一連線
+    # 啟動定時排程器
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(send_random_message, 'interval', hours=4, minutes=30)
+    scheduler.start()
+    
     try:
         BOT.delete_webhook()
-        print("已清除舊的 Webhook 設定，準備啟動 Polling...")
-    except Exception as e:
-        print(f"清理 Webhook 時發生錯誤 (可忽略): {e}")
+    except: pass
     
-    # 3. 加入防崩潰重試邏輯，避免因單次連線衝突導致程式徹底停止
     while True:
         try:
-            print("沈星回啟動中...")
             BOT.polling(none_stop=True, interval=1, timeout=60, long_polling_timeout=60)
         except Exception as e:
-            print(f"Polling 發生錯誤: {e}，10秒後嘗試重啟連線...")
             time.sleep(10)
