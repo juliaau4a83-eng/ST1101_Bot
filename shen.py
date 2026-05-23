@@ -7,6 +7,7 @@ import re
 from flask import Flask
 from threading import Thread
 from apscheduler.schedulers.background import BackgroundScheduler
+from datetime import datetime, timedelta, timezone
 
 BOT = telebot.TeleBot(os.environ['TELEGRAM_TOKEN'])
 API_KEY = os.environ['GEMINI_API_KEY']
@@ -90,14 +91,19 @@ def handle_message(message):
     if len(conversation_history) > 10: conversation_history = conversation_history[-10:]
         
     try:
-        # 1. 動態獲取清單，精確告知 AI 只能用這些標籤
+        # --- 修正：獲取「當下」的時間 ---
+        # 確保使用你在上方定義的 tz 變數
+        now = datetime.now(tz) 
+        current_time_str = now.strftime("%Y-%m-%d %H:%M:%S")
+        
+        # 1. 將時間加入 Prompt
         available_tags = list(STICKER_MAP.keys())
         prompt_with_stickers = (
             f"{ROLE_PROMPT}\n\n"
+            f"【現在時間資訊】：{current_time_str} (請根據這個時間來判斷作息與回應)\n"
             f"【貼圖發送規則】\n"
-            f"你目前擁有的貼圖標籤只有：{available_tags}。\n"
-            f"若要發送貼圖，必須且只能從上述清單中選擇一個名稱，格式為 [STICKER:名稱]。\n"
-            f"嚴禁使用清單以外的標籤（例如絕對不准使用 [STICKER:撒嬌] 或其他未定義的名稱）。"
+            f"你擁有的貼圖標籤：{available_tags}。\n"
+            f"必須且只能從上述清單選擇，格式 [STICKER:名稱]，嚴禁使用其他標籤。"
         )
         
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={API_KEY}"
