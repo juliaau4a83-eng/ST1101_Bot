@@ -146,16 +146,20 @@ def handle_message(message):
         print(f"Error: {e}")
 
 if __name__ == "__main__":
+    # 啟動 Flask
     Thread(target=run_flask, daemon=True).start()
+    
+    # 啟動 Scheduler
     scheduler = BackgroundScheduler()
     scheduler.add_job(send_random_message, 'interval', hours=4, minutes=30)
     scheduler.start()
     
-    try:
-        # 加入 drop_pending_updates=True，這能直接清除 Telegram 那邊積壓的所有錯誤訊號
-        BOT.delete_webhook(drop_pending_updates=True)
-    except Exception as e:
-        print(f"清理舊連線時發生錯誤: {e}")
-    
     print("沈星回正在連線中...")
-    BOT.infinity_polling(timeout=60, long_polling_timeout=60)
+    
+    # --- 最終極的穩健啟動方式 ---
+    # 1. 確保不使用 Webhook 模式
+    BOT.remove_webhook() 
+    
+    # 2. 啟動 Polling，設定極小的 polling_interval，避免過度頻繁請求
+    # 且不設定過長的 timeout
+    BOT.infinity_polling(timeout=10, long_polling_timeout=5)
