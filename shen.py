@@ -63,6 +63,24 @@ def handle_message(message):
     except Exception as e:
         print(f"Error: {e}")
 
+import time
+
 if __name__ == "__main__":
+    # 1. 啟動 Flask 門戶
     Thread(target=run_flask).start()
-    BOT.polling(none_stop=True)
+    
+    # 2. 強制清除殘留的 Webhook，確保 polling 是唯一連線
+    try:
+        BOT.delete_webhook()
+        print("已清除舊的 Webhook 設定，準備啟動 Polling...")
+    except Exception as e:
+        print(f"清理 Webhook 時發生錯誤 (可忽略): {e}")
+    
+    # 3. 加入防崩潰重試邏輯，避免因單次連線衝突導致程式徹底停止
+    while True:
+        try:
+            print("沈星回啟動中...")
+            BOT.polling(none_stop=True, interval=1, timeout=60, long_polling_timeout=60)
+        except Exception as e:
+            print(f"Polling 發生錯誤: {e}，10秒後嘗試重啟連線...")
+            time.sleep(10)
