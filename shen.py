@@ -156,11 +156,12 @@ if __name__ == "__main__":
     
     print("沈星回正在連線中...")
     
-    # --- 關鍵修正：單一實例與容錯 ---
-    # 不要使用 infinity_polling，改用 polling 確保只連線一次
-    # 並加上 error_handler 避免程式崩潰後引發連鎖錯誤
+    # 關鍵修正：
+    # 1. 直接移除 Webhook
+    # 2. 設定一個極小的 polling_interval，避免過度頻繁的連線請求
+    # 3. 使用 None_stop=True 確保它在遇到輕微錯誤時自動恢復
     try:
         BOT.remove_webhook()
-        BOT.polling(none_stop=True, interval=1, timeout=20)
+        BOT.infinity_polling(timeout=20, long_polling_timeout=5, interval=1)
     except Exception as e:
-        print(f"啟動失敗，請稍後重試: {e}")
+        print(f"啟動時發生意外錯誤: {e}")
