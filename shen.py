@@ -91,8 +91,8 @@ def handle_message(message):
     if len(conversation_history) > 10: conversation_history = conversation_history[-10:]
         
     try:
-        # --- 修正：獲取「當下」的時間 ---
-        # 確保使用你在上方定義的 tz 變數
+        # 【修正】：必須先定義時區，才能使用它
+        tz = timezone(timedelta(hours=8))
         now = datetime.now(tz) 
         current_time_str = now.strftime("%Y-%m-%d %H:%M:%S")
         
@@ -154,14 +154,13 @@ if __name__ == "__main__":
     scheduler.add_job(send_random_message, 'interval', hours=4, minutes=30)
     scheduler.start()
     
-    print("沈星回正在連線中...")
+    # --- 增加啟動緩衝 ---
+    print("沈星回正在準備連線，等待 10 秒以避開啟動衝突...")
+    time.sleep(10) 
     
-    # 關鍵修正：
-    # 1. 直接移除 Webhook
-    # 2. 設定一個極小的 polling_interval，避免過度頻繁的連線請求
-    # 3. 使用 None_stop=True 確保它在遇到輕微錯誤時自動恢復
     try:
         BOT.remove_webhook()
-        BOT.infinity_polling(timeout=20, long_polling_timeout=5, interval=1)
+        print("沈星回正式連線中...")
+        BOT.infinity_polling(timeout=60, long_polling_timeout=60)
     except Exception as e:
-        print(f"啟動時發生意外錯誤: {e}")
+        print(f"啟動時發生錯誤: {e}")
