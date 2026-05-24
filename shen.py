@@ -144,7 +144,7 @@ def handle_message(message):
                     time.sleep(0.5)
             
             # 5. 統一的貼圖發送邏輯 (結合冷卻、機率與強制標記)
-            can_send_time = (now - last_sticker_time).total_seconds() > 300 
+            can_send_time = (now - last_sticker_time).total_seconds() > 10 
             is_random_allowed = random.random() < 0.3
             
             if sticker_to_send:
