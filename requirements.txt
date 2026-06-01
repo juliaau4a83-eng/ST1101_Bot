@@ -2,4 +2,3 @@ flask
 pyTelegramBotAPI
 requests
 apscheduler
-gunicorn
