@@ -96,14 +96,33 @@ def handle_message(message):
         if response.status_code == 200:
             ai_text = response.json()['candidates'][0]['content']['parts'][0]['text']
             
-            # 清理貼圖與發送
+            # 清理貼圖標記
             sticker_match = re.search(r'\[STICKER:(.*?)\]', ai_text)
             clean_text = re.sub(r'\[STICKER:.*?\]', '', ai_text).replace("[FORCE_STICKER]", "").strip()
             
-            # 儲存紀錄並發送 (合併文字，避免觸發 429)
+            # 儲存紀錄
             conversation_history.append({"role": "model", "parts": [{"text": clean_text}]})
-            BOT.send_message(message.chat.id, clean_text)
             
+            # 改進後的發送邏輯
+            sentences = re.split(r'(?<=[。！？\n])', clean_text)
+            buffer = ""
+            for sentence in sentences:
+                if not sentence.strip():
+                    continue
+                
+                # 若句子過長或 buffer 累積過多，則先送出
+                if len(buffer) + len(sentence) > 100: 
+                    BOT.send_message(message.chat.id, buffer)
+                    time.sleep(0.8) 
+                    buffer = sentence
+                else:
+                    buffer += sentence
+            
+            # 發送最後剩下的訊息
+            if buffer:
+                BOT.send_message(message.chat.id, buffer)
+            
+            # 發送貼圖 (修正：移除重複的判斷)
             if sticker_match:
                 tag = sticker_match.group(1)
                 if tag in STICKER_MAP:
