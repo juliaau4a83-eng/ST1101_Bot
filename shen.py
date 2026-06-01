@@ -158,15 +158,15 @@ def handle_message(message):
         print(f"Error: {e}")
 
 if __name__ == "__main__":
-    # 啟動 Flask
-    Thread(target=run_flask, daemon=True).start()
-    
-    # 啟動 Scheduler
+    # 啟動 Scheduler (原本的邏輯保留)
     scheduler = BackgroundScheduler()
     scheduler.add_job(send_random_message, 'interval', hours=4, minutes=30)
     scheduler.start()
     
-    # --- 增加啟動緩衝 ---
+    # --- 關鍵修改 ---
+    # 刪除 Thread(target=run_flask, daemon=True).start()
+    # 因為 gunicorn 會自動啟動 Flask app，不需要你自己再開一次
+    
     print("沈星回正在準備連線，等待 10 秒以避開啟動衝突...")
     time.sleep(10) 
     
