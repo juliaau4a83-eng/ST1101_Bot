@@ -107,6 +107,12 @@ def execute_gemini_request(message):
                 BOT.send_sticker(message.chat.id, STICKER_MAP[sticker_match.group(1)])
         
         elif response.status_code == 429:
+            
+            print("====== GEMINI ======")
+            print("STATUS:", response.status_code)
+            print("BODY:", response.text)
+            print("====================")
+            
             BOT.send_message(message.chat.id, "沈星回訊號緩衝中，請稍候再聊。")
         else:
             BOT.send_message(message.chat.id, f"沈星回暫時失聯 (Code: {response.status_code})")
