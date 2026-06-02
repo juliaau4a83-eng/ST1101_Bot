@@ -133,13 +133,22 @@ def handle_message(message):
 
 # --- 主程式 ---
 if __name__ == "__main__":
+    # 啟動 Web Server
     threading.Thread(target=run_flask, daemon=True).start()
+    # 啟動佇列處理
     threading.Thread(target=process_msg_queue, daemon=True).start()
     
+    # 啟動 Scheduler
     scheduler = BackgroundScheduler()
     scheduler.add_job(send_random_message, 'interval', hours=4, minutes=30)
     scheduler.start()
     
     print("沈星回系統啟動中...")
-    BOT.remove_webhook()
-    BOT.infinity_polling(timeout=60, long_polling_timeout=60)
+    
+    # 【關鍵】在進入 polling 之前，強制處理掉任何掛起的 webhook 或連線
+    try:
+        BOT.remove_webhook()
+        # 使用 long polling，並將 allowed_updates 設定為只有訊息，避免干擾
+        BOT.infinity_polling(timeout=60, long_polling_timeout=60, allowed_updates=['message'])
+    except Exception as e:
+        print(f"啟動時發生錯誤: {e}")
