@@ -14,7 +14,7 @@ API_KEY = os.environ['GEMINI_API_KEY']
 CHAT_ID = os.environ.get('CHAT_ID')
 
 # 模型 URL (注意：確認為 3.5-flash)
-GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash:generateContent?key={API_KEY}"
+GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={API_KEY}"
 
 # (請保持你原來的 ROLE_PROMPT 和 STICKER_MAP 不變)
 # 角色設定
