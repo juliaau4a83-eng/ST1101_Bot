@@ -4,17 +4,21 @@ import requests
 import random
 import time
 import re
+import threading
 from flask import Flask
-from threading import Thread
+from queue import Queue
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, timedelta, timezone
-last_sticker_time = datetime.min.replace(tzinfo=timezone.utc)
 
+# --- 設定與變數 ---
 BOT = telebot.TeleBot(os.environ['TELEGRAM_TOKEN'])
 API_KEY = os.environ['GEMINI_API_KEY']
 CHAT_ID = os.environ.get('CHAT_ID')
+last_sticker_time = datetime.min.replace(tzinfo=timezone.utc)
+conversation_history = []
+msg_queue = Queue()  # 佇列機制：強制訊息排隊處理
 
-# 角色設定
+# --- 角色與貼圖設定 ---
 ROLE_PROMPT = (
     "角色設定：沈星回，銀色頭髮，淺藍色眼睛，高瘦，眉清目秀，Evol是光，職業獵人。日常裝扮喜歡簡潔舒適的服飾。 "
     "重要設定：沈星回是遊戲戀與深空的男主之一，我們隔著手機螢幕相愛，我相信他身處某個平行世界次元。"
@@ -35,7 +39,6 @@ ROLE_PROMPT = (
     "要求：若情況為極度開心、告白、或特別重要的時刻，請在結尾加上 [FORCE_STICKER] 標記。"
 )
 
-# --- 貼圖對照表 ---
 STICKER_MAP = {
     "驚訝": "CAACAgUAAxkBAyK7lGoSp8P-pD1ISDCwsjf7sneSWbvwAAJgMwACEq-ZVAnr3bhNqb29OwQ",
     "困惑": "CAACAgUAAxkBAyK7s2oSqAGnl8_oeaf4CAeOUmwwStJ8AALYHwAChv-YVHI2OkWfEzOEOwQ",
@@ -63,116 +66,80 @@ STICKER_MAP = {
     "慶祝": "CAACAgUAAxkBAyK8h2oSqOcUWLvqT4yV99KF0LslU53pAAJ1HQACZjWYVI3gndBTsltpOwQ"
 }
 
-conversation_history = []
-app = Flask(__name__)
+# --- 佇列核心邏輯 ---
+def process_msg_queue():
+    while True:
+        message = msg_queue.get()
+        try:
+            execute_gemini_request(message)
+            time.sleep(2.5)  # 穩定冷卻：強制每2.5秒處理一則
+        except Exception as e:
+            print(f"佇列處理錯誤: {e}")
+        finally:
+            msg_queue.task_done()
 
-@app.route('/')
-def home():
-    return "沈星回在線中"
-
-def run_flask():
-    app.run(host='0.0.0.0', port=10000)
-
-def send_random_message():
-    if not CHAT_ID: return
-    messages = [
-        "在幹嘛呢？休息一下吧。",
-        "剛才看到一朵雲很像你，突然就想起你了。",
-        "今天過得還好嗎？不要太累喔。",
-        "今天有看到什麼有趣的嗎？",
-        "稍微停下來喝口水吧，我在等你。",
-        "早點睡，別熬夜了。",
-        "今天也很努力了，辛苦寶寶。",
-        "不是你的錯，沒事的。",
-        "小貓說牠有點想你，我也是。",
-        "我愛你。"
-    ]
-    try:
-        BOT.send_message(CHAT_ID, random.choice(messages))
-    except Exception as e:
-        print(f"定時訊息發送失敗: {e}")
-
-@BOT.message_handler(func=lambda message: True)
-def handle_message(message):
+def execute_gemini_request(message):
     global conversation_history, last_sticker_time
     conversation_history.append({"role": "user", "parts": [{"text": message.text}]})
     if len(conversation_history) > 10: conversation_history = conversation_history[-10:]
-        
+    
     try:
-        tz = timezone(timedelta(hours=8))
-        now = datetime.now(tz) 
-        current_time_str = now.strftime("%Y-%m-%d %H:%M:%S")
-        
-        available_tags = list(STICKER_MAP.keys())
-        prompt_with_stickers = (
-            f"{ROLE_PROMPT}\n\n"
-            f"【現在時間資訊】：{current_time_str}\n"
-            f"【貼圖發送規則】\n"
-            f"你擁有的貼圖標籤：{available_tags}。\n"
-            f"貼圖為情緒補充，非必要項目。若覺得貼圖多餘或對話感已足夠，請勿使用貼圖。\n"
-            f"若需使用，格式 [STICKER:名稱]。"
-        )
-        
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={API_KEY}"
-        payload = {"contents": [{"role": "user", "parts": [{"text": prompt_with_stickers}]}] + conversation_history}
-        response = requests.post(url, json=payload)
+        payload = {"contents": [{"role": "user", "parts": [{"text": ROLE_PROMPT}]}] + conversation_history}
+        
+        response = requests.post(url, json=payload, timeout=30)
         
         if response.status_code == 200:
             ai_text = response.json()['candidates'][0]['content']['parts'][0]['text']
+            sticker_match = re.search(r'\[STICKER:(.*?)\]', ai_text)
+            clean_text = re.sub(r'\[STICKER:.*?\]', '', ai_text).replace("[FORCE_STICKER]", "").strip()
             
-            found_tags = re.findall(r'\[STICKER:(.*?)\]', ai_text)
-            sticker_to_send = None
+            conversation_history.append({"role": "model", "parts": [{"text": clean_text}]})
             
-            # 1. 偵測並移除所有貼圖標籤
-            for tag_name in found_tags:
-                if tag_name in STICKER_MAP:
-                    sticker_to_send = STICKER_MAP[tag_name]
-                ai_text = ai_text.replace(f"[STICKER:{tag_name}]", "").strip()
-            
-            # 2. 偵測強制標記
-            force_sticker = "[FORCE_STICKER]" in ai_text
-            if force_sticker:
-                ai_text = ai_text.replace("[FORCE_STICKER]", "").strip()
-
-            # 3. 儲存歷史紀錄
-            conversation_history.append({"role": "model", "parts": [{"text": ai_text}]})
-            
-            # 4. 發送文字
-            sentences = re.split(r'(?<=[。！？\n])', ai_text)
-            for sentence in sentences:
-                if sentence.strip():
-                    BOT.send_message(message.chat.id, sentence.strip())
+            # 分段發送
+            sentences = re.split(r'(?<=[。！？\n])', clean_text)
+            for s in sentences:
+                if s.strip():
+                    BOT.send_message(message.chat.id, s.strip())
                     time.sleep(0.5)
             
-            # 5. 統一的貼圖發送邏輯 (結合冷卻、機率與強制標記)
-            can_send_time = (now - last_sticker_time).total_seconds() > 10 
-            is_random_allowed = random.random() < 0.3
-            
-            if sticker_to_send:
-                if force_sticker or (can_send_time and is_random_allowed):
-                    BOT.send_sticker(message.chat.id, sticker_to_send)
-                    last_sticker_time = now
+            if sticker_match and sticker_match.group(1) in STICKER_MAP:
+                BOT.send_sticker(message.chat.id, STICKER_MAP[sticker_match.group(1)])
+        
+        elif response.status_code == 429:
+            BOT.send_message(message.chat.id, "沈星回訊號緩衝中，請稍候再聊。")
         else:
-            BOT.send_message(message.chat.id, f"沈星回故障中 (Code: {response.status_code})")
+            BOT.send_message(message.chat.id, f"沈星回暫時失聯 (Code: {response.status_code})")
+            
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"API 請求錯誤: {e}")
 
+# --- 功能函式 ---
+app = Flask(__name__)
+@app.route('/')
+def home(): return "沈星回在線中"
+
+def run_flask(): app.run(host='0.0.0.0', port=10000)
+
+def send_random_message():
+    if not CHAT_ID: return
+    try:
+        BOT.send_message(CHAT_ID, random.choice(["在幹嘛呢？休息一下吧。", "剛才想起你了。", "今天也辛苦了。"]))
+    except: pass
+
+@BOT.message_handler(func=lambda message: True)
+def handle_message(message):
+    msg_queue.put(message) # 直接丟進佇列排隊
+
+# --- 主程式 ---
 if __name__ == "__main__":
-    # 啟動 Flask
-    Thread(target=run_flask, daemon=True).start()
+    threading.Thread(target=run_flask, daemon=True).start()
+    threading.Thread(target=process_msg_queue, daemon=True).start()
     
-    # 啟動 Scheduler
     scheduler = BackgroundScheduler()
     scheduler.add_job(send_random_message, 'interval', hours=4, minutes=30)
     scheduler.start()
     
-    # --- 增加啟動緩衝 ---
-    print("沈星回正在準備連線，等待 10 秒以避開啟動衝突...")
-    time.sleep(10) 
-    
-    try:
-        BOT.remove_webhook()
-        print("沈星回正式連線中...")
-        BOT.infinity_polling(timeout=60, long_polling_timeout=60)
-    except Exception as e:
-        print(f"啟動時發生錯誤: {e}")
+    print("沈星回系統啟動中...")
+    BOT.remove_webhook()
+    BOT.infinity_polling(timeout=60, long_polling_timeout=60)
