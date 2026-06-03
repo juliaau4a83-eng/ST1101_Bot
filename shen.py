@@ -329,25 +329,28 @@ def handle_message(message):
             )
         )
 
-
 if __name__ == "__main__":
-    # 啟動 Flask
     Thread(target=run_flask, daemon=True).start()
 
-    # 啟動 Scheduler
     scheduler = BackgroundScheduler()
     scheduler.add_job(send_random_message, 'interval', hours=4, minutes=30)
     scheduler.start()
 
-    send_random_message()
-
-    print("等待 Render 完全啟動")
-
+    print("等待 Render 完全啟動", flush=True)
     time.sleep(15)
 
-    BOT.remove_webhook()
+    while True:
+        try:
+            print("移除 webhook...", flush=True)
+            BOT.remove_webhook(drop_pending_updates=True)
 
-    BOT.infinity_polling(
-        timeout=60,
-        long_polling_timeout=60
-    )
+            print("沈星回正式連線中，開始 polling...", flush=True)
+            BOT.infinity_polling(
+                timeout=60,
+                long_polling_timeout=60,
+                skip_pending=True
+            )
+
+        except Exception as e:
+            print(f"Polling 斷線，準備重連: {e}", flush=True)
+            time.sleep(10)
