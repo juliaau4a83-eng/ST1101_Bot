@@ -91,7 +91,7 @@ def send_random_message():
         "自然。"
     )
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={API_KEY}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={API_KEY}"
     payload = {
         "contents": [
             {
@@ -190,7 +190,7 @@ def handle_message(message):
             f"若需要貼圖使用：[STICKER:名稱]"
         )
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={API_KEY}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={API_KEY}"
         payload = {"contents": [{"role": "user", "parts": [{"text": prompt_with_stickers}]}] + conversation_history}
         response = None
 
@@ -299,20 +299,14 @@ def handle_message(message):
                 )
 
         else:
-            offline_messages = [
-                "沈星回現在正在任務中。",
-                "訊號有點差，我晚點回來。",
-                "剛剛穿過躍遷點，連線斷了一下。",
-                "獵人總部訊號不太穩。",
-                "我好像暫時收不到訊息。",
-                "正在執行任務，等等我。",
-            ]
+            status_code = response.status_code if response else "no response"
+            response_text = response.text if response else "no response"
+
+            print(f"Gemini failed: {status_code} {response_text}", flush=True)
 
             BOT.send_message(
                 message.chat.id,
-                random.choice(
-                    offline_messages
-                )
+                random.choice(offline_messages)
             )
 
     except Exception as e:
