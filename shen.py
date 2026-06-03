@@ -64,6 +64,15 @@ STICKER_MAP = {
     "慶祝": "CAACAgUAAxkBAyK8h2oSqOcUWLvqT4yV99KF0LslU53pAAJ1HQACZjWYVI3gndBTsltpOwQ"
 }
 
+offline_messages = [
+    "沈星回現在正在任務中。",
+    "訊號有點差，我晚點回來。",
+    "剛剛穿過躍遷點，連線斷了一下。",
+    "獵人總部訊號不太穩。",
+    "我好像暫時收不到訊息。",
+    "正在執行任務，等等我。",
+]
+
 conversation_history = []
 app = Flask(__name__)
 
@@ -118,7 +127,7 @@ def send_random_message():
                 break
 
             if response.status_code in [429, 500, 502, 503, 504]:
-                wait_time = random.randint(5, 15)
+                wait_time = random.randint(20, 60)
 
                 print(
                     f"Gemini Busy {response.status_code} "
@@ -209,7 +218,7 @@ def handle_message(message):
                     break
 
                 if response.status_code in [429, 500, 502, 503, 504]:
-                    wait_time = random.randint(5, 15)
+                    wait_time = random.randint(20, 60)
 
                     print(
                         f"Gemini Busy {response.status_code} "
@@ -302,8 +311,8 @@ def handle_message(message):
                 )
 
         else:
-            status_code = response.status_code if response else "no response"
-            response_text = response.text if response else "no response"
+            status_code = response.status_code if response is not None else "no response"
+            response_text = response.text if response is not None else "no response"
 
             print(f"Gemini failed: {status_code} {response_text}", flush=True)
 
@@ -323,7 +332,7 @@ if __name__ == "__main__":
     Thread(target=run_flask, daemon=True).start()
 
     scheduler = BackgroundScheduler()
-    scheduler.add_job(send_random_message, 'interval', hours=4, minutes=30)
+   # scheduler.add_job(send_random_message, 'interval', hours=4, minutes=30)
     scheduler.start()
 
     print("等待 Render 完全啟動", flush=True)
@@ -343,5 +352,9 @@ if __name__ == "__main__":
             print("polling 結束，準備重啟...", flush=True)
 
         except Exception as e:
-            print(f"Polling 斷線，準備重連: {repr(e)}", flush=True)
-            time.sleep(10)
+            print(f"Handle message error: {repr(e)}", flush=True)
+
+            BOT.send_message(
+                message.chat.id,
+                random.choice(offline_messages)
+            )
