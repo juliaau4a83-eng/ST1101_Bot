@@ -153,15 +153,6 @@ def send_random_message():
             BOT.send_message(CHAT_ID, ai_text)
             return
 
-        offline_messages = [
-            "沈星回現在正在任務中。",
-            "訊號有點差，我晚點回來。",
-            "剛剛穿過躍遷點，連線斷了一下。",
-            "獵人總部訊號不太穩。",
-            "我好像暫時收不到訊息。",
-            "正在執行任務，等等我。",
-        ]
-
         BOT.send_message(
             CHAT_ID,
             random.choice(
@@ -181,6 +172,12 @@ def ping(message):
 @BOT.message_handler(func=lambda message: True)
 def handle_message(message):
     global conversation_history, last_sticker_time
+
+    if not message.text:
+        return
+
+    if message.text.startswith("/"):
+        return
 
     conversation_history.append({"role": "user", "parts": [{"text": message.text}]})
     if len(conversation_history) > 10:
@@ -206,7 +203,7 @@ def handle_message(message):
         payload = {"contents": [{"role": "user", "parts": [{"text": prompt_with_stickers}]}] + conversation_history}
         response = None
 
-        for i in range(5):
+        for i in range(1):
             try:
                 response = requests.post(
                     url,
@@ -232,10 +229,11 @@ def handle_message(message):
                 break
 
             except Exception as e:
-                print(f"Request Error: {repr(e)}", flush=True)
+                print(f"Handle message error: {repr(e)}", flush=True)
 
-                time.sleep(
-                random.randint(5, 15)
+                BOT.send_message(
+                    message.chat.id,
+                    random.choice(offline_messages)
                 )
 
         if response and response.status_code == 200:
@@ -322,18 +320,37 @@ def handle_message(message):
             )
 
     except Exception as e:
-        print(f"Request Error: {repr(e)}", flush=True)
+        print(f"Handle message error: {repr(e)}", flush=True)
 
-        time.sleep(
-        random.randint(5, 15)
+        BOT.send_message(
+            message.chat.id,
+            random.choice(offline_messages)
         )
+    
+def schedule_next_random_message():
+    next_hours = random.uniform(5, 8)
+    run_time = datetime.now() + timedelta(hours=next_hours)
+
+    scheduler.add_job(
+        send_random_message_job,
+        'date',
+        run_date=run_time
+    )
+
+    print(f"下次主動訊息約 {next_hours:.1f} 小時後", flush=True)
+
+
+def send_random_message_job():
+    send_random_message()
+    schedule_next_random_message()
+
 
 if __name__ == "__main__":
     Thread(target=run_flask, daemon=True).start()
 
     scheduler = BackgroundScheduler()
-   # scheduler.add_job(send_random_message, 'interval', hours=4, minutes=30)
     scheduler.start()
+    schedule_next_random_message()
 
     print("等待 Render 完全啟動", flush=True)
     time.sleep(15)
@@ -352,9 +369,5 @@ if __name__ == "__main__":
             print("polling 結束，準備重啟...", flush=True)
 
         except Exception as e:
-            print(f"Handle message error: {repr(e)}", flush=True)
-
-            BOT.send_message(
-                message.chat.id,
-                random.choice(offline_messages)
-            )
+            print(f"Polling 斷線，準備重連: {repr(e)}", flush=True)
+            time.sleep(10)
