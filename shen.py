@@ -89,47 +89,6 @@ def send_random_message():
         "請主動傳送一句訊息給女朋友。"
         "30字內。"
         "自然。"
-    )    "惆悵": "CAACAgUAAxkBAyK8HGoSqGq0g-6BT2u02yWQYBgvk6-5AALVHgACyrCYVH_eKeJ3GdhcOwQ",
-    "休息": "CAACAgUAAxkBAyK8JmoSqHPWNtKNn-dzPbl23ipfOqWUAAJwHQACiOmZVLu0nwt77E3HOwQ",
-    "理解": "CAACAgUAAxkBAyK8MWoSqHyqwZjZFQABOQvAIVdjj-nExAACahwAAnwemFROZRdT16JoXzsE",
-    "好奇": "CAACAgUAAxkBAyK8NmoSqIb0yT3t_o2q2jSXWaSkROP8AAJxHwAC2tKYVDtA0aewSiVAOwQ",
-    "詢問": "CAACAgUAAxkBAyK8RWoSqJ7FmFUOkwkbR3K-ZWB9EzKvAAIwJAACGV-YVA_3nok2ta_BOwQ",
-    "凝視": "CAACAgUAAxkBAyK8S2oSqKZNdIThpJLLmQABdBlETYwM6gAC7BwAAn3ymVTngnVvfBfboDsE",
-    "晚安": "CAACAgUAAxkBAyK8UmoSqLBniZCthW2LHHzDYPhXtxB0AAJeHwACS26RVOXTfUUkQtnUOwQ",
-    "放棄": "CAACAgUAAxkBAyK8WWoSqLjMDkBQduhu_zv5kT9Rsn5DAAJBHgACMBuQVAqnVYEP8CfrOwQ",
-    "逃避": "CAACAgUAAxkBAyK8XGoSqL8SQeq7Kw8Wc4wLCR_Rdfq4AAKMHQAC_8CZVEmjfWP9a076OwQ",
-    "再見": "CAACAgUAAxkBAyK8YWoSqMZ-PjJGzLHSJSOFkrKi9XBnAALxHwACzw6YVD34SkOR1z_5OwQ",
-    "愛你": "CAACAgUAAxkBAyK8amoSqM_mPWSbLVwtbmQvUs5LDkqdAAILHQACPbeYVJHGt_H6oND8OwQ",
-    "摸頭": "CAACAgUAAxkBAyK8c2oSqNiqUuPVz5HPO9BRA3wYPA3BAAKlHgAC9JKZVPj4cjoGvkFlOwQ",
-    "驚喜": "CAACAgUAAxkBAyK8gGoSqOB7IXtkO1GwnZD7XDfvTnmVAAJHJAACM1-YVMRvVpW2v0koOwQ",
-    "慶祝": "CAACAgUAAxkBAyK8h2oSqOcUWLvqT4yV99KF0LslU53pAAJ1HQACZjWYVI3gndBTsltpOwQ"
-}
-
-conversation_history = []
-app = Flask(__name__)
-
-
-@app.route('/')
-def home():
-    return "沈星回在線中"
-
-
-def run_flask():
-    app.run(
-        host='0.0.0.0',
-        port=int(os.environ.get("PORT", 10000))
-    )
-
-
-def send_random_message():
-    if not CHAT_ID:
-        return
-
-    prompt = (
-        "你是沈星回。"
-        "請主動傳送一句訊息給女朋友。"
-        "30字內。"
-        "自然。"
     )
 
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={API_KEY}"
@@ -190,42 +149,6 @@ def send_random_message():
             "我好像暫時收不到訊息。",
             "正在執行任務，等等我。",
         ]
-
-        BOT.send_message(
-            CHAT_ID,
-            random.choice(
-                offline_messages
-            )
-        )
-
-    except Exception as e:
-        print(f"定時訊息發送失敗: {e}")
-
-
-@BOT.message_handler(func=lambda message: True)
-def handle_message(message):
-    global conversation_history, last_sticker_time
-
-    conversation_history.append({"role": "user", "parts": [{"text": message.text}]})
-    if len(conversation_history) > 10:
-        conversation_history = conversation_history[-10:]
-
-    try:
-        tz = timezone(timedelta(hours=8))
-        now = datetime.now(tz)
-        current_time_str = now.strftime("%Y-%m-%d %H:%M:%S")
-
-        available_tags = list(STICKER_MAP.keys())
-        prompt_with_stickers = (
-            f"{ROLE_PROMPT}\n\n"
-            f"【現在台灣時間】{current_time_str}\n"
-            f"請自然參考目前時間。\n"
-            f"凌晨可以睏、晚上可以道晚安。\n"
-            f"不要刻意報時。\n\n"
-            f"【貼圖標籤】{available_tags}\n"
-            f"若需要貼圖使用：[STICKER:名稱]"
-        )
-                ]
 
         BOT.send_message(
             CHAT_ID,
