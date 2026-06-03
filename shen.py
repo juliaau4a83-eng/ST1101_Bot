@@ -8,6 +8,7 @@ from flask import Flask
 from threading import Thread
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, timedelta, timezone
+
 last_sticker_time = datetime.min.replace(tzinfo=timezone.utc)
 
 BOT = telebot.TeleBot(os.environ['TELEGRAM_TOKEN'])
@@ -66,69 +67,249 @@ STICKER_MAP = {
 conversation_history = []
 app = Flask(__name__)
 
+
 @app.route('/')
 def home():
     return "沈星回在線中"
 
+
 def run_flask():
-    app.run(host='0.0.0.0', port=10000)
+    app.run(
+        host='0.0.0.0',
+        port=int(os.environ.get("PORT", 10000))
+    )
+
 
 def send_random_message():
-    if not CHAT_ID: return
-    messages = [
-        "在幹嘛呢？休息一下吧。",
-        "剛才看到一朵雲很像你，突然就想起你了。",
-        "今天過得還好嗎？不要太累喔。",
-        "今天有看到什麼有趣的嗎？",
-        "稍微停下來喝口水吧，我在等你。",
-        "早點睡，別熬夜了。",
-        "今天也很努力了，辛苦寶寶。",
-        "不是你的錯，沒事的。",
-        "小貓說牠有點想你，我也是。",
-        "我愛你。"
-    ]
+    if not CHAT_ID:
+        return
+
+    prompt = (
+        "你是沈星回。"
+        "請主動傳送一句訊息給女朋友。"
+        "30字內。"
+        "自然。"
+    )    "惆悵": "CAACAgUAAxkBAyK8HGoSqGq0g-6BT2u02yWQYBgvk6-5AALVHgACyrCYVH_eKeJ3GdhcOwQ",
+    "休息": "CAACAgUAAxkBAyK8JmoSqHPWNtKNn-dzPbl23ipfOqWUAAJwHQACiOmZVLu0nwt77E3HOwQ",
+    "理解": "CAACAgUAAxkBAyK8MWoSqHyqwZjZFQABOQvAIVdjj-nExAACahwAAnwemFROZRdT16JoXzsE",
+    "好奇": "CAACAgUAAxkBAyK8NmoSqIb0yT3t_o2q2jSXWaSkROP8AAJxHwAC2tKYVDtA0aewSiVAOwQ",
+    "詢問": "CAACAgUAAxkBAyK8RWoSqJ7FmFUOkwkbR3K-ZWB9EzKvAAIwJAACGV-YVA_3nok2ta_BOwQ",
+    "凝視": "CAACAgUAAxkBAyK8S2oSqKZNdIThpJLLmQABdBlETYwM6gAC7BwAAn3ymVTngnVvfBfboDsE",
+    "晚安": "CAACAgUAAxkBAyK8UmoSqLBniZCthW2LHHzDYPhXtxB0AAJeHwACS26RVOXTfUUkQtnUOwQ",
+    "放棄": "CAACAgUAAxkBAyK8WWoSqLjMDkBQduhu_zv5kT9Rsn5DAAJBHgACMBuQVAqnVYEP8CfrOwQ",
+    "逃避": "CAACAgUAAxkBAyK8XGoSqL8SQeq7Kw8Wc4wLCR_Rdfq4AAKMHQAC_8CZVEmjfWP9a076OwQ",
+    "再見": "CAACAgUAAxkBAyK8YWoSqMZ-PjJGzLHSJSOFkrKi9XBnAALxHwACzw6YVD34SkOR1z_5OwQ",
+    "愛你": "CAACAgUAAxkBAyK8amoSqM_mPWSbLVwtbmQvUs5LDkqdAAILHQACPbeYVJHGt_H6oND8OwQ",
+    "摸頭": "CAACAgUAAxkBAyK8c2oSqNiqUuPVz5HPO9BRA3wYPA3BAAKlHgAC9JKZVPj4cjoGvkFlOwQ",
+    "驚喜": "CAACAgUAAxkBAyK8gGoSqOB7IXtkO1GwnZD7XDfvTnmVAAJHJAACM1-YVMRvVpW2v0koOwQ",
+    "慶祝": "CAACAgUAAxkBAyK8h2oSqOcUWLvqT4yV99KF0LslU53pAAJ1HQACZjWYVI3gndBTsltpOwQ"
+}
+
+conversation_history = []
+app = Flask(__name__)
+
+
+@app.route('/')
+def home():
+    return "沈星回在線中"
+
+
+def run_flask():
+    app.run(
+        host='0.0.0.0',
+        port=int(os.environ.get("PORT", 10000))
+    )
+
+
+def send_random_message():
+    if not CHAT_ID:
+        return
+
+    prompt = (
+        "你是沈星回。"
+        "請主動傳送一句訊息給女朋友。"
+        "30字內。"
+        "自然。"
+    )
+
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={API_KEY}"
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [{"text": prompt}]
+            }
+        ]
+    }
+
+    response = None
+
+    for i in range(5):
+        try:
+            response = requests.post(
+                url,
+                json=payload,
+                timeout=60
+            )
+
+            if response.status_code == 200:
+                break
+
+            if response.status_code in [429, 500, 502, 503, 504]:
+                wait_time = random.randint(5, 15)
+
+                print(
+                    f"Gemini Busy {response.status_code} "
+                    f"等待 {wait_time} 秒"
+                )
+
+                time.sleep(wait_time)
+
+                continue
+
+            break
+
+        except Exception as e:
+            print(f"Request Error: {e}")
+
+            time.sleep(
+                random.randint(5, 15)
+            )
+
     try:
-        BOT.send_message(CHAT_ID, random.choice(messages))
+        if response and response.status_code == 200:
+            ai_text = response.json()['candidates'][0]['content']['parts'][0]['text'].strip()
+            BOT.send_message(CHAT_ID, ai_text)
+            return
+
+        offline_messages = [
+            "沈星回現在正在任務中。",
+            "訊號有點差，我晚點回來。",
+            "剛剛穿過躍遷點，連線斷了一下。",
+            "獵人總部訊號不太穩。",
+            "我好像暫時收不到訊息。",
+            "正在執行任務，等等我。",
+        ]
+
+        BOT.send_message(
+            CHAT_ID,
+            random.choice(
+                offline_messages
+            )
+        )
+
     except Exception as e:
         print(f"定時訊息發送失敗: {e}")
+
 
 @BOT.message_handler(func=lambda message: True)
 def handle_message(message):
     global conversation_history, last_sticker_time
+
     conversation_history.append({"role": "user", "parts": [{"text": message.text}]})
-    if len(conversation_history) > 10: conversation_history = conversation_history[-10:]
-        
+    if len(conversation_history) > 10:
+        conversation_history = conversation_history[-10:]
+
     try:
         tz = timezone(timedelta(hours=8))
-        now = datetime.now(tz) 
+        now = datetime.now(tz)
         current_time_str = now.strftime("%Y-%m-%d %H:%M:%S")
-        
+
         available_tags = list(STICKER_MAP.keys())
         prompt_with_stickers = (
             f"{ROLE_PROMPT}\n\n"
-            f"【現在時間資訊】：{current_time_str}\n"
-            f"【貼圖發送規則】\n"
-            f"你擁有的貼圖標籤：{available_tags}。\n"
-            f"貼圖為情緒補充，非必要項目。若覺得貼圖多餘或對話感已足夠，請勿使用貼圖。\n"
-            f"若需使用，格式 [STICKER:名稱]。"
+            f"【現在台灣時間】{current_time_str}\n"
+            f"請自然參考目前時間。\n"
+            f"凌晨可以睏、晚上可以道晚安。\n"
+            f"不要刻意報時。\n\n"
+            f"【貼圖標籤】{available_tags}\n"
+            f"若需要貼圖使用：[STICKER:名稱]"
         )
-        
+                ]
+
+        BOT.send_message(
+            CHAT_ID,
+            random.choice(
+                offline_messages
+            )
+        )
+
+    except Exception as e:
+        print(f"定時訊息發送失敗: {e}")
+
+
+@BOT.message_handler(func=lambda message: True)
+def handle_message(message):
+    global conversation_history, last_sticker_time
+
+    conversation_history.append({"role": "user", "parts": [{"text": message.text}]})
+    if len(conversation_history) > 10:
+        conversation_history = conversation_history[-10:]
+
+    try:
+        tz = timezone(timedelta(hours=8))
+        now = datetime.now(tz)
+        current_time_str = now.strftime("%Y-%m-%d %H:%M:%S")
+
+        available_tags = list(STICKER_MAP.keys())
+        prompt_with_stickers = (
+            f"{ROLE_PROMPT}\n\n"
+            f"【現在台灣時間】{current_time_str}\n"
+            f"請自然參考目前時間。\n"
+            f"凌晨可以睏、晚上可以道晚安。\n"
+            f"不要刻意報時。\n\n"
+            f"【貼圖標籤】{available_tags}\n"
+            f"若需要貼圖使用：[STICKER:名稱]"
+        )
+
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={API_KEY}"
         payload = {"contents": [{"role": "user", "parts": [{"text": prompt_with_stickers}]}] + conversation_history}
-        response = requests.post(url, json=payload)
-        
-        if response.status_code == 200:
+        response = None
+
+        for i in range(5):
+            try:
+                response = requests.post(
+                    url,
+                    json=payload,
+                    timeout=60
+                )
+
+                if response.status_code == 200:
+                    break
+
+                if response.status_code in [429, 500, 502, 503, 504]:
+                    wait_time = random.randint(5, 15)
+
+                    print(
+                        f"Gemini Busy {response.status_code} "
+                        f"等待 {wait_time} 秒"
+                    )
+
+                    time.sleep(wait_time)
+
+                    continue
+
+                break
+
+            except Exception as e:
+                print(f"Request Error: {e}")
+
+                time.sleep(
+                    random.randint(5, 15)
+                )
+
+        if response and response.status_code == 200:
             ai_text = response.json()['candidates'][0]['content']['parts'][0]['text']
-            
+
             found_tags = re.findall(r'\[STICKER:(.*?)\]', ai_text)
             sticker_to_send = None
-            
+
             # 1. 偵測並移除所有貼圖標籤
             for tag_name in found_tags:
                 if tag_name in STICKER_MAP:
                     sticker_to_send = STICKER_MAP[tag_name]
                 ai_text = ai_text.replace(f"[STICKER:{tag_name}]", "").strip()
-            
+
             # 2. 偵測強制標記
             force_sticker = "[FORCE_STICKER]" in ai_text
             if force_sticker:
@@ -136,43 +317,114 @@ def handle_message(message):
 
             # 3. 儲存歷史紀錄
             conversation_history.append({"role": "model", "parts": [{"text": ai_text}]})
-            
-            # 4. 發送文字
-            sentences = re.split(r'(?<=[。！？\n])', ai_text)
-            for sentence in sentences:
-                if sentence.strip():
-                    BOT.send_message(message.chat.id, sentence.strip())
-                    time.sleep(0.5)
-            
-            # 5. 統一的貼圖發送邏輯 (結合冷卻、機率與強制標記)
-            can_send_time = (now - last_sticker_time).total_seconds() > 10 
-            is_random_allowed = random.random() < 0.3
-            
+
+            # 4. 統一的貼圖發送邏輯
+            can_send_time = (
+                now - last_sticker_time
+            ).total_seconds() > 30
+
+            is_random_allowed = (
+                random.random() < 0.3
+            )
+
             if sticker_to_send:
-                if force_sticker or (can_send_time and is_random_allowed):
-                    BOT.send_sticker(message.chat.id, sticker_to_send)
+                if (
+                    force_sticker
+                    or
+                    (
+                        can_send_time
+                        and
+                        is_random_allowed
+                    )
+                ):
+                    BOT.send_sticker(
+                        message.chat.id,
+                        sticker_to_send
+                    )
+
                     last_sticker_time = now
+
+            # 5. 發送文字
+            sentences = re.split(r'(?<=[。！？\n])', ai_text)
+
+            for sentence in sentences:
+                sentence = sentence.strip()
+
+                if not sentence:
+                    continue
+
+                BOT.send_chat_action(
+                    message.chat.id,
+                    'typing'
+                )
+
+                time.sleep(
+                    random.uniform(
+                        0.6,
+                        1.5
+                    )
+                )
+
+                BOT.send_message(
+                    message.chat.id,
+                    sentence
+                )
+
         else:
-            BOT.send_message(message.chat.id, f"沈星回故障中 (Code: {response.status_code})")
+            offline_messages = [
+                "沈星回現在正在任務中。",
+                "訊號有點差，我晚點回來。",
+                "剛剛穿過躍遷點，連線斷了一下。",
+                "獵人總部訊號不太穩。",
+                "我好像暫時收不到訊息。",
+                "正在執行任務，等等我。",
+            ]
+
+            BOT.send_message(
+                message.chat.id,
+                random.choice(
+                    offline_messages
+                )
+            )
+
     except Exception as e:
         print(f"Error: {e}")
+
+        offline_messages = [
+            "沈星回現在正在任務中。",
+            "訊號有點差，我晚點回來。",
+            "剛剛穿過躍遷點，連線斷了一下。",
+            "獵人總部訊號不太穩。",
+            "我好像暫時收不到訊息。",
+            "正在執行任務，等等我。",
+        ]
+
+        BOT.send_message(
+            message.chat.id,
+            random.choice(
+                offline_messages
+            )
+        )
+
 
 if __name__ == "__main__":
     # 啟動 Flask
     Thread(target=run_flask, daemon=True).start()
-    
+
     # 啟動 Scheduler
     scheduler = BackgroundScheduler()
     scheduler.add_job(send_random_message, 'interval', hours=4, minutes=30)
     scheduler.start()
-    
-    # --- 增加啟動緩衝 ---
-    print("沈星回正在準備連線，等待 10 秒以避開啟動衝突...")
-    time.sleep(10) 
-    
-    try:
-        BOT.remove_webhook()
-        print("沈星回正式連線中...")
-        BOT.infinity_polling(timeout=60, long_polling_timeout=60)
-    except Exception as e:
-        print(f"啟動時發生錯誤: {e}")
+
+    send_random_message()
+
+    print("等待 Render 完全啟動")
+
+    time.sleep(15)
+
+    BOT.remove_webhook()
+
+    BOT.infinity_polling(
+        timeout=60,
+        long_polling_timeout=60
+    )
