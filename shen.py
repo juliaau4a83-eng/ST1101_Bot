@@ -14,6 +14,7 @@ last_sticker_time = datetime.min.replace(tzinfo=timezone.utc)
 BOT = telebot.TeleBot(os.environ['TELEGRAM_TOKEN'])
 API_KEY = os.environ['GEMINI_API_KEY']
 CHAT_ID = os.environ.get('CHAT_ID')
+SUMMARY_MEMORY = os.environ.get("SUMMARY_MEMORY", "")
 
 # 角色設定
 ROLE_PROMPT = (
@@ -94,10 +95,13 @@ def send_random_message():
         return
 
     prompt = (
-        "你是沈星回。"
+        f"{ROLE_PROMPT}\n\n"
+        f"【長期記憶】\n{SUMMARY_MEMORY}\n\n"
         "請主動傳送一句訊息給女朋友。"
         "30字內。"
-        "自然。"
+        "自然、日常、像隔著手機突然想到她。"
+        "不要像客服，不要像罐頭問候。"
+        "不要每次都說早安、今天要開心、加油。"
     )
 
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={API_KEY}"
@@ -191,6 +195,7 @@ def handle_message(message):
         available_tags = list(STICKER_MAP.keys())
         prompt_with_stickers = (
             f"{ROLE_PROMPT}\n\n"
+            f"【長期記憶】\n{SUMMARY_MEMORY}\n\n"
             f"【現在台灣時間】{current_time_str}\n"
             f"請自然參考目前時間。\n"
             f"凌晨可以睏、晚上可以道晚安。\n"
