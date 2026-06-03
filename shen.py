@@ -342,7 +342,7 @@ if __name__ == "__main__":
     while True:
         try:
             print("移除 webhook...", flush=True)
-            BOT.remove_webhook(drop_pending_updates=True)
+            BOT.remove_webhook()
 
             print("沈星回正式連線中，開始 polling...", flush=True)
             BOT.infinity_polling(
