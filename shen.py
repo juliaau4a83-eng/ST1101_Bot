@@ -161,6 +161,11 @@ def send_random_message():
         print(f"定時訊息發送失敗: {e}")
 
 
+@BOT.message_handler(commands=['ping'])
+def ping(message):
+    print("收到 /ping", flush=True)
+    BOT.reply_to(message, "我在線。")
+
 @BOT.message_handler(func=lambda message: True)
 def handle_message(message):
     global conversation_history, last_sticker_time
@@ -347,10 +352,11 @@ if __name__ == "__main__":
             print("沈星回正式連線中，開始 polling...", flush=True)
             BOT.infinity_polling(
                 timeout=60,
-                long_polling_timeout=60,
-                skip_pending=True
+                long_polling_timeout=60
             )
 
+            print("polling 結束，準備重啟...", flush=True)
+
         except Exception as e:
-            print(f"Polling 斷線，準備重連: {e}", flush=True)
+            print(f"Polling 斷線，準備重連: {repr(e)}", flush=True)
             time.sleep(10)
