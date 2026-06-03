@@ -91,7 +91,7 @@ def send_random_message():
         "自然。"
     )
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={API_KEY}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={API_KEY}"
     payload = {
         "contents": [
             {
@@ -111,6 +111,9 @@ def send_random_message():
                 timeout=60
             )
 
+            if response is None:
+                print("Gemini request 完全沒有成功建立 response，請檢查 Render 是否能連外、API_KEY 是否存在、requests 是否被 timeout", flush=True)
+    
             if response.status_code == 200:
                 break
 
@@ -190,7 +193,7 @@ def handle_message(message):
             f"若需要貼圖使用：[STICKER:名稱]"
         )
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={API_KEY}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={API_KEY}"
         payload = {"contents": [{"role": "user", "parts": [{"text": prompt_with_stickers}]}] + conversation_history}
         response = None
 
@@ -220,10 +223,10 @@ def handle_message(message):
                 break
 
             except Exception as e:
-                print(f"Request Error: {e}")
+                print(f"Request Error: {repr(e)}", flush=True)
 
                 time.sleep(
-                    random.randint(5, 15)
+                random.randint(5, 15)
                 )
 
         if response and response.status_code == 200:
@@ -310,22 +313,10 @@ def handle_message(message):
             )
 
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Request Error: {repr(e)}", flush=True)
 
-        offline_messages = [
-            "沈星回現在正在任務中。",
-            "訊號有點差，我晚點回來。",
-            "剛剛穿過躍遷點，連線斷了一下。",
-            "獵人總部訊號不太穩。",
-            "我好像暫時收不到訊息。",
-            "正在執行任務，等等我。",
-        ]
-
-        BOT.send_message(
-            message.chat.id,
-            random.choice(
-                offline_messages
-            )
+        time.sleep(
+        random.randint(5, 15)
         )
 
 if __name__ == "__main__":
