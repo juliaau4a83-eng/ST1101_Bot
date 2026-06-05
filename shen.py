@@ -104,7 +104,7 @@ def send_random_message():
         "不要每次都說早安、今天要開心、加油。"
     )
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key={API_KEY}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key={API_KEY}"
     payload = {
         "contents": [
             {
@@ -199,12 +199,13 @@ def handle_message(message):
             f"【現在台灣時間】{current_time_str}\n"
             f"請自然參考目前時間。\n"
             f"凌晨可以睏、晚上可以道晚安。\n"
+            f"不要刻意提火鍋。\n"
             f"不要刻意報時。\n\n"
             f"【貼圖標籤】{available_tags}\n"
             f"若需要貼圖使用：[STICKER:名稱]"
         )
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key={API_KEY}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key={API_KEY}"
         payload = {"contents": [{"role": "user", "parts": [{"text": prompt_with_stickers}]}] + conversation_history}
         response = None
 
